@@ -1,3 +1,5 @@
+Click here to run Jupyter Notebooks in Binder: [![Run Jupyter Notebooks](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/RichardPotthoff/KMLtoOSMAndGPX/main?filepath=./)
+
 # KMLtoOSMAndGPX
 Convert google my maps KML files to OSMAnd style GPX files, including icon conversion.
 
