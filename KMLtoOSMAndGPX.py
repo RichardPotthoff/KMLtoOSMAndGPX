@@ -35,6 +35,7 @@ DEFAULT_TRACK_SPLIT = "no_split"
 KMLCOLOR = "KMLCOLOR"
 # Probably should make this a command line arguent
 LAYERS_TO_IGNORE = ["Untitled layer"]
+NS = 'osmand:' #prepended to non-gpx tags
 # list of fields to insert into the GPX element
 
 # globals to keep track of some counts
@@ -223,19 +224,19 @@ def addFileExtensionsTags(gpx,args):
 	# seems like this should be at the track level, but it's not
 	extensions = ET.SubElement(gpx,"extensions")
 	if args.width:
-		ET.SubElement(extensions, "width").text = str(args.width)
+		ET.SubElement(extensions, NS+"width").text = str(args.width)
 	else:
-		ET.SubElement(extensions, "width").text = DEFAULT_TRACK_WIDTH
-	ET.SubElement(extensions, "show_arrows").text = "false"
-	ET.SubElement(extensions, "show_start_finish").text = "false"
+		ET.SubElement(extensions, NS+"width").text = DEFAULT_TRACK_WIDTH
+	ET.SubElement(extensions, NS+"show_arrows").text = "false"
+	ET.SubElement(extensions, NS+"show_start_finish").text = "false"
 	# When you have multiple tracks in a file the split amounts are cummulative across
 	# all the tracks. Each track's split values don't start at zero.
 	if args.split == DEFAULT_TRACK_SPLIT:
-		ET.SubElement(extensions, "split_type").text = DEFAULT_TRACK_SPLIT
+		ET.SubElement(extensions, NS+"split_type").text = DEFAULT_TRACK_SPLIT
 	else:
-		ET.SubElement(extensions, "split_type").text = "distance"
+		ET.SubElement(extensions, NS+"split_type").text = "distance"
 		#split interval is in meters and args.interval is in miles, so convert miles to meters
-		ET.SubElement(extensions, "split_interval").text = str(int(float(args.split) * 1609.34))
+		ET.SubElement(extensions, NS+"split_interval").text = str(int(float(args.split) * 1609.34))
 	return
 #========================================================================================
 # writeGPXFile
@@ -254,6 +255,8 @@ def writeGPXFile(gpx,outputFilename):
 #========================================================================================
 def addGPXElement():
 	gpx = ET.Element("gpx", version="1.1", creator="KMLtoOSMAndGPX", xmlns="http://www.topografix.com/GPX/1/1")
+	if NS!='':
+	 	gpx.attrib['xmlns:'+NS.strip(':')]="http://"+NS.strip(':')+".net"
 	return(gpx)
 #========================================================================================
 # processWaypoint
@@ -311,8 +314,8 @@ def processWaypoint(placemark,gpx):
 		else:
 			waypt = KMLToOSMAndIcon("unknown")
 		#print("KMLToOSMAndIcon: icon:",waypt.icon,"color:",waypt.color,"background:",waypt.background)
-		ET.SubElement(extensions,"icon").text = waypt.icon
-		ET.SubElement(extensions,"background").text = waypt.background
+		ET.SubElement(extensions,NS+"icon").text = waypt.icon
+		ET.SubElement(extensions,NS+"background").text = waypt.background
 		if waypt.color == KMLCOLOR: # we use value from KML file
 			try:
 				if style[2] == "labelson":  # there is no color value in styleURL string
@@ -321,7 +324,7 @@ def processWaypoint(placemark,gpx):
 					waypt.color=style[2]
 			except IndexError:
 				waypt.color=DEFAULT_ICON_COLOR
-		ET.SubElement(extensions, "color").text = "#" + waypt.color
+		ET.SubElement(extensions, NS+"color").text = "#" + waypt.color
 #========================================================================================
 # processTrack
 #========================================================================================
@@ -348,20 +351,7 @@ def processTrack(placemark,gpx,args):
 			#description = html_escape(description.text.strip())
 			description = description.text.strip()
 			ET.SubElement(track, "desc").text = description
-
-		coordinates = linestring.text.strip().split()
-		trackpoints = []
-		trkseg = ET.SubElement(track, "trkseg")
-		# Iterate over the coordinates and create GPX trackpoints
-		for coordinate in coordinates:
-			longitude, latitude, altitude = coordinate.split(",")
-			trackpoint = ET.Element("trkpt", lat=latitude, lon=longitude)
-			if altitude is not None:
-				ET.SubElement(trackpoint, "ele").text = altitude
-			trackpoints.append(trackpoint)
-		for trackpoint in trackpoints:
-			trkseg.append(trackpoint)
-
+			
 		extensions = ET.SubElement(track,"extensions")
 
 		#              [0]   [1]    [2]
@@ -380,7 +370,7 @@ def processTrack(placemark,gpx,args):
 			transparency = args.transparency
 		else:
 			transparency = DEFAULT_TRACK_TRANSPARENCY
-		ET.SubElement(extensions, "color").text = "#" + transparency + color
+		ET.SubElement(extensions,NS+"color").text = "#" + transparency + color
 		
 		#Seems like the <extensions> for track width, show_arrows and split 
 		#should be associated with each track, but OSMAnd doesn't do it that way, it's file based
@@ -394,6 +384,20 @@ def processTrack(placemark,gpx,args):
 		#			y is the scaled value in the GPX range of 1-24
 
 		# Add the GPX Track element to the GPX file
+
+		coordinates = linestring.text.strip().split()
+		trackpoints = []
+		trkseg = ET.SubElement(track, "trkseg")
+		# Iterate over the coordinates and create GPX trackpoints
+		for coordinate in coordinates:
+			longitude, latitude, altitude = coordinate.split(",")
+			trackpoint = ET.Element("trkpt", lat=latitude, lon=longitude)
+			if altitude is not None:
+				ET.SubElement(trackpoint, "ele").text = altitude
+			trackpoints.append(trackpoint)
+		for trackpoint in trackpoints:
+			trkseg.append(trackpoint)
+
 		gpx.append(track)
 #========================================================================================
 # 
